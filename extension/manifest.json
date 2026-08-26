@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "FF Sidekick Draft Companion",
+  "version": "2.0.0",
+  "description": "Syncs your ESPN draft-room picks to the FF Sidekick board. No local server, no setup.",
+  "permissions": ["storage"],
+  "background": { "service_worker": "background.js" },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "FF Sidekick Draft Companion",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://fantasy.espn.com/football/draft*",
+        "https://fantasy.espn.com/football/mockdraft*",
+        "https://fantasy.espn.com/football/tools/draft*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://ashritverma.github.io/ff-sidekick/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": ["bridge.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "externally_connectable": {
+    "matches": ["https://ashritverma.github.io/*"]
+  }
+}
