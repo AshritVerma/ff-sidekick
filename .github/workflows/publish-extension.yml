@@ -43,11 +43,11 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: "22"
 
       # major.minor stays hand-controlled in the manifest; the patch is the run
       # number, which only ever increases. The store rejects any version it has
@@ -64,7 +64,7 @@ jobs:
           zip=$(bash scripts/package_extension.sh "${{ steps.version.outputs.value }}")
           echo "zip=$zip" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ff-sidekick-extension-v${{ steps.version.outputs.value }}
           path: ${{ steps.package.outputs.zip }}
