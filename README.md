@@ -109,7 +109,44 @@ See [marketing/CUSTOMERS.md](marketing/CUSTOMERS.md) for the Kit + Stripe setup
 and [marketing/LAUNCH.md](marketing/LAUNCH.md) for the full launch checklist.
 
 ### Deploying
-- **Board:** GitHub Pages serves this repo root. Push to `main`.
-- **Extension:** package `extension/` and submit to the Chrome Web Store — see
-  [store/LISTING.md](store/LISTING.md). After approval, update the `STORE_URL`
-  constant in `index.html` so the install banner points at the listing.
+- **Board:** GitHub Pages serves this repo root. Push to `main` and it is live in
+  a minute or two, with no review. Keep as much logic here as possible — it is
+  the only half of the product you can ship instantly.
+- **Extension:** every store release is a zip upload against the same listing,
+  and every one of them gets reviewed. Code-only changes from an established
+  account usually clear in under a day; anything that adds a permission or
+  widens a host pattern is treated close to a new submission and can take weeks,
+  and it also **disables the extension for existing users** until each of them
+  approves the new permission. Avoid touching the `permissions`,
+  `host_permissions`, `content_scripts.matches` and `externally_connectable`
+  blocks in [extension/manifest.json](extension/manifest.json) unless you have to.
+
+#### First submission (manual, once)
+The Web Store API can only update an item that already exists, so version one
+has to go through the dashboard by hand:
+
+```bash
+scripts/package_extension.sh          # -> dist/ff-sidekick-extension-v2.1.0.zip
+```
+
+Upload that at the [developer dashboard](https://chrome.google.com/webstore/devconsole),
+fill the listing from [store/LISTING.md](store/LISTING.md), and submit. Then set
+the `STORE_URL` constant in `index.html` so the install banner points at the
+listing, and add the five `CWS_*` secrets described in
+[.github/workflows/publish-extension.yml](.github/workflows/publish-extension.yml).
+
+#### Every release after that (automatic)
+Any push to `main` that touches `extension/**` packages the extension and submits
+it for review. Board-only pushes and the daily data-refresh commit are ignored on
+purpose, since each store upload costs a review.
+
+Versions are handled for you: `major.minor` comes from the manifest, so you bump
+that by hand when a release deserves it, and the patch is the workflow run
+number. That guarantees the strictly-increasing version the store demands without
+a version-bump commit on every change, so the manifest in git reads `2.1.0` while
+the published build is `2.1.<run>`. Each successful release is tagged `ext-v<version>`.
+
+To build a zip without submitting it, run the workflow from the Actions tab with
+**Submit for review** unchecked; it uploads as a draft you can inspect in the
+dashboard. If the `CWS_*` secrets are missing the workflow still builds the zip
+and attaches it as an artifact.
