@@ -1,0 +1,122 @@
+name: Publish extension
+
+# Pushes that touch extension/ get packaged and sent to the Chrome Web Store.
+# Board-only pushes are deliberately ignored: every store upload costs a review,
+# while the board itself deploys through Pages with no review at all. Keep logic
+# in index.html where you can and this workflow rarely has to run.
+#
+# Requires five repository secrets (Settings -> Secrets -> Actions). Without
+# CWS_EXTENSION_ID the job still builds the zip and attaches it as an artifact,
+# so it is useful before the listing exists:
+#
+#   CWS_EXTENSION_ID    the item id, from the dashboard URL
+#   CWS_PUBLISHER_ID    your publisher account id, also from the dashboard URL
+#   CWS_CLIENT_ID       Google OAuth client, see fregante/chrome-webstore-upload-keys
+#   CWS_CLIENT_SECRET
+#   CWS_REFRESH_TOKEN
+#
+# The API can only update an item that already exists, so the very first
+# submission has to go through the dashboard by hand.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "extension/**"
+      - "scripts/package_extension.sh"
+      - ".github/workflows/publish-extension.yml"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Submit for review (off = upload as a draft only)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-extension
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # major.minor stays hand-controlled in the manifest; the patch is the run
+      # number, which only ever increases. The store rejects any version it has
+      # already seen, and this makes that impossible to trip over.
+      - name: Work out the version
+        id: version
+        run: |
+          base=$(python3 -c "import json; print('.'.join(json.load(open('extension/manifest.json'))['version'].split('.')[:2]))")
+          echo "value=$base.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Package
+        id: package
+        run: |
+          zip=$(bash scripts/package_extension.sh "${{ steps.version.outputs.value }}")
+          echo "zip=$zip" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ff-sidekick-extension-v${{ steps.version.outputs.value }}
+          path: ${{ steps.package.outputs.zip }}
+
+      - name: Check for store credentials
+        id: creds
+        env:
+          EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+        run: |
+          if [ -n "$EXTENSION_ID" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CWS_EXTENSION_ID is not set, so nothing was sent to the store. The packaged zip is attached as an artifact."
+          fi
+
+      - name: Send to the Chrome Web Store
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          ZIP: ${{ steps.package.outputs.zip }}
+          DRAFT_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.publish != true }}
+        run: |
+          npm install -g chrome-webstore-upload-cli@4
+          # No subcommand means upload and publish; "upload" leaves it as a draft.
+          if [ "$DRAFT_ONLY" = "true" ]; then
+            chrome-webstore-upload upload --source "$ZIP"
+          else
+            chrome-webstore-upload --source "$ZIP"
+          fi
+
+      - name: Tag what was published
+        if: steps.creds.outputs.ready == 'true'
+        run: |
+          tag="ext-v${{ steps.version.outputs.value }}"
+          git tag "$tag"
+          git push origin "$tag"
+
+      - name: Summary
+        run: |
+          {
+            echo "Packaged \`v${{ steps.version.outputs.value }}\` from \`${GITHUB_SHA:0:7}\`."
+            if [ "${{ steps.creds.outputs.ready }}" = "true" ]; then
+              echo ""
+              echo "Sent to the Chrome Web Store. Review usually clears in under a day for"
+              echo "code-only changes; expect much longer if this one touched permissions."
+            else
+              echo ""
+              echo "Store credentials are not configured yet, so this run only built the zip."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
