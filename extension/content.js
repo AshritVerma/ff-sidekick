@@ -38,6 +38,13 @@
           return;
         }
         dead = 0;
+        if (res.locked) {
+          // Free draft already used and no season pass: stop tracking this one.
+          // Re-queue so nothing is silently dropped if they upgrade mid-draft.
+          for (var j = 0; j < rows.length; j++) delete seen[rows[j].round + '.' + rows[j].pick];
+          paint('season pass needed — click the FF Sidekick icon', '#f59e0b');
+          return;
+        }
         sent += rows.length;
         paint(res.total + ' picks tracked', '#4ade80');
       });

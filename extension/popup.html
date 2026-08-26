@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 300px;
+    font: 13px/1.45 -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    color: #1a1a1a; background: #fff;
+  }
+  .hd {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 14px; background: #cc0000; color: #fff;
+  }
+  .hd svg { flex: 0 0 auto; }
+  .hd b { font-size: 14px; font-weight: 800; letter-spacing: .2px; }
+  .body { padding: 14px; }
+  .status {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 13px; margin-bottom: 6px;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+  .dot.ok { background: #0a7d33; }
+  .dot.free { background: #0668d0; }
+  .dot.lock { background: #b45309; }
+  .sub { color: #4d5257; font-size: 12px; margin-bottom: 12px; }
+  .cta {
+    display: block; width: 100%; text-align: center;
+    background: #0a7d33; color: #fff; border: 0; border-radius: 7px;
+    padding: 10px 12px; font-size: 13px; font-weight: 800; cursor: pointer;
+  }
+  .cta:hover { background: #0c8f3b; }
+  .anchor { text-align: center; color: #7c8288; font-size: 11px; margin-top: 8px; }
+  .anchor s { color: #9aa0a6; }
+  .links { margin-top: 12px; border-top: 1px solid #eef0f2; padding-top: 10px; }
+  .links a { display: block; color: #0668d0; text-decoration: none; font-size: 12px; padding: 3px 0; }
+  .links a:hover { text-decoration: underline; }
+  .hide { display: none; }
+</style>
+</head>
+<body>
+  <div class="hd">
+    <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <rect x="1" y="1" width="30" height="30" rx="7" fill="#fff" opacity="0.16"/>
+      <path d="M8 22 L13 15 L17 18 L24 9" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <circle cx="24" cy="9" r="2.4" fill="#fff"/>
+    </svg>
+    <b>FF Sidekick</b>
+  </div>
+  <div class="body">
+    <div class="status"><span id="dot" class="dot free"></span><span id="statusText">Checking pass…</span></div>
+    <div id="sub" class="sub"></div>
+
+    <button id="buy" class="cta hide">Unlock unlimited drafts — $9.99</button>
+    <div id="anchor" class="anchor hide">One-time for the 2026 season. <s>Draft Wizard: $35.99/yr</s></div>
+
+    <div class="links">
+      <a id="board" href="https://ashritverma.github.io/ff-sidekick/" target="_blank" rel="noopener">Open the research board →</a>
+      <a id="manage" class="hide" href="#">Manage / restore purchase</a>
+    </div>
+  </div>
+  <script src="ExtPay.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

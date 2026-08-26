@@ -6,6 +6,17 @@
 <title>FF Sidekick</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Analytics: Plausible (lightweight, cookieless). Set data-domain to the site
+     you register at plausible.io, then this tracks pageviews + custom events. -->
+<script defer data-domain="ashritverma.github.io" src="https://plausible.io/js/script.manual.js"></script>
+<script>
+  // Plausible queue stub so window.plausible() works before the script loads.
+  window.plausible=window.plausible||function(){(window.plausible.q=window.plausible.q||[]).push(arguments)};
+  // Track a manual pageview (script.manual.js does not auto-fire) and expose a
+  // single funnel-event helper used across the board.
+  window.plausible('pageview');
+  window.ffTrack=function(ev,props){try{window.plausible(ev,props?{props:props}:undefined);}catch(e){}};
+</script>
 <style>
 :root{
   --espn-dark:#17181a; --espn-dark2:#222426;
@@ -60,6 +71,50 @@ body{
   font-size:1.15rem;line-height:1;cursor:pointer;opacity:.85;padding:0 2px;
 }
 #ext-banner .eb-x:hover{opacity:1}
+
+/* ---------- Season-pass upgrade banner ---------- */
+#pay-banner{
+  display:flex;align-items:center;gap:12px;
+  background:#b45309;color:#fff;padding:9px 16px;
+  font-size:.78rem;font-weight:500;
+}
+#pay-banner .eb-msg{flex:1 1 auto}
+#pay-banner .eb-msg b{font-weight:700}
+#pay-banner .eb-cta{
+  flex:0 0 auto;background:#fff;color:#b45309;
+  padding:5px 12px;border-radius:6px;font-weight:700;text-decoration:none;
+  font-size:.75rem;white-space:nowrap;
+}
+#pay-banner .eb-cta:hover{background:#fdf4e7}
+
+/* ---------- Email gate ---------- */
+#email-gate{
+  position:fixed;inset:0;z-index:2147483646;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  background:linear-gradient(160deg,#17181a 0%,#2a2c30 100%);
+}
+#email-gate .eg-card{
+  width:100%;max-width:420px;background:#fff;border-radius:14px;
+  padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center;
+}
+#email-gate .eg-logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:18px}
+#email-gate .eg-brand{font-size:1.15rem;font-weight:800;letter-spacing:.2px}
+#email-gate .eg-h{font-size:1.5rem;font-weight:800;line-height:1.2;margin-bottom:10px}
+#email-gate .eg-p{color:var(--ink-2);font-size:.9rem;line-height:1.5;margin-bottom:20px}
+#email-gate form{display:flex;flex-direction:column;gap:10px}
+#email-gate input{
+  width:100%;padding:12px 14px;font-size:.95rem;border:1.5px solid var(--line);
+  border-radius:9px;outline:none;font-family:inherit;
+}
+#email-gate input:focus{border-color:var(--blue)}
+#email-gate button{
+  width:100%;padding:12px 14px;font-size:.95rem;font-weight:800;color:#fff;
+  background:var(--green);border:0;border-radius:9px;cursor:pointer;font-family:inherit;
+}
+#email-gate button:hover{background:#0c8f3b}
+#email-gate .eg-err{color:var(--red);font-size:.8rem;margin-top:8px}
+#email-gate .eg-fine{color:var(--ink-3);font-size:.72rem;margin-top:14px}
+body.eg-locked{overflow:hidden}
 
 /* ---------- Page ---------- */
 .page{max-width:1240px;margin:0 auto;padding:18px 16px 60px}
@@ -660,6 +715,90 @@ tr.pickmark.now span{
   <button id="ext-banner-x" class="eb-x" title="Dismiss" aria-label="Dismiss">×</button>
 </div>
 
+<div id="pay-banner" hidden>
+  <span class="eb-msg">You've used your free draft. Unlock <b>unlimited drafts for the 2026 season — $9.99</b>. Click the <b>FF Sidekick</b> icon in your Chrome toolbar to upgrade.</span>
+  <a id="pay-banner-link" class="eb-cta" href="#" target="_blank" rel="noopener">Pricing</a>
+</div>
+
+<div id="email-gate" hidden>
+  <div class="eg-card">
+    <div class="eg-logo">
+      <svg width="34" height="34" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <rect x="1" y="1" width="30" height="30" rx="7" fill="#cc0000"/>
+        <path d="M8 22 L13 15 L17 18 L24 9" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="24" cy="9" r="2.4" fill="#fff"/>
+      </svg>
+      <div class="eg-brand">FF Sidekick</div>
+    </div>
+    <h1 class="eg-h">Your fantasy draft war room</h1>
+    <p class="eg-p">Top-300 PPR values, true averages, bye weeks, strength of schedule, depth charts, and live pick tracking. Drop your email to open the board.</p>
+    <form id="eg-form" novalidate>
+      <input id="eg-email" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" required>
+      <button id="eg-submit" type="submit">Open the board</button>
+    </form>
+    <div id="eg-err" class="eg-err" hidden>Enter a valid email.</div>
+    <p class="eg-fine">One or two draft-season emails, no spam. Unsubscribe anytime.</p>
+  </div>
+</div>
+<script>
+/* ---- Email gate --------------------------------------------------------
+   First visit shows an email wall; a valid submit unlocks the board for good
+   (localStorage) and best-effort subscribes the address to Kit. Unlock is
+   optimistic so a Kit/CORS hiccup never traps a visitor. No backend needed. */
+(function(){
+  // Kit (ConvertKit) form endpoint. Create a form in Kit, then paste its
+  // action URL here, e.g. https://app.kit.com/forms/1234567/subscriptions
+  const KIT_FORM_ACTION='';           // TODO: paste your Kit form action URL
+  const KIT_TAG='ff-sidekick-lead';   // segments board signups as "lead"
+  const KEY='ff_email_unlocked';
+
+  const gate=document.getElementById('email-gate');
+  const form=document.getElementById('eg-form');
+  const email=document.getElementById('eg-email');
+  const err=document.getElementById('eg-err');
+  if(!gate)return;
+
+  // The offline standalone build (opened via file://) must never gate.
+  if(location.protocol==='file:'){gate.hidden=true;return;}
+
+  let unlocked=false; try{unlocked=!!localStorage.getItem(KEY);}catch(e){}
+  if(unlocked){gate.hidden=true;return;}
+  gate.hidden=false;
+  document.body.classList.add('eg-locked');
+  setTimeout(()=>{try{email.focus();}catch(e){}},80);
+
+  function valid(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((v||'').trim());}
+  function track(ev){try{window.ffTrack&&window.ffTrack(ev);}catch(e){}}
+
+  function subscribe(addr){
+    if(!KIT_FORM_ACTION)return;       // not configured yet: skip the network call
+    try{
+      const body=new FormData();
+      body.append('email_address',addr);
+      body.append('fields[source]','board-gate');
+      body.append('tags[]',KIT_TAG);
+      fetch(KIT_FORM_ACTION,{method:'POST',body,mode:'no-cors'}).catch(()=>{});
+    }catch(e){}
+  }
+
+  function unlock(){
+    try{localStorage.setItem(KEY,String(Date.now()));}catch(e){}
+    gate.hidden=true;
+    document.body.classList.remove('eg-locked');
+    track('email_unlock');
+  }
+
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    const v=(email.value||'').trim();
+    if(!valid(v)){err.hidden=false;email.focus();return;}
+    err.hidden=true;
+    subscribe(v);                     // best-effort, fire and forget
+    unlock();                         // optimistic: never trap the user
+  });
+})();
+</script>
+
 <div class="ticker" id="ticker" hidden>
   <div class="tk-label">Latest picks</div>
   <div class="tk-scroll" id="tk-scroll"><div class="tk-row" id="tk-row"></div></div>
@@ -846,9 +985,12 @@ function draftFromRows(payload){
 
 /* ---- Install banner: nudge first-time visitors toward the extension ---- */
 const STORE_URL='https://github.com/AshritVerma/ff-sidekick#install';   // TODO: swap to the Chrome Web Store URL once the listing is approved
+const PRICING_URL='https://github.com/AshritVerma/ff-sidekick#pricing';
 (function(){
   const link=document.getElementById('ext-banner-link');
-  if(link)link.href=STORE_URL;
+  if(link){link.href=STORE_URL;link.addEventListener('click',()=>window.ffTrack&&window.ffTrack('get_extension_click'));}
+  const pay=document.getElementById('pay-banner-link');
+  if(pay){pay.href=PRICING_URL;pay.addEventListener('click',()=>window.ffTrack&&window.ffTrack('pricing_click'));}
   const x=document.getElementById('ext-banner-x');
   if(x)x.addEventListener('click',()=>{
     document.getElementById('ext-banner').hidden=true;
@@ -866,7 +1008,7 @@ const STORE_URL='https://github.com/AshritVerma/ff-sidekick#install';   // TODO:
 })();
 const LIVE={
   on:false, reachable:false, status:'off', message:'', age:null,
-  picks:[], teams:[], players:{}, teamCount:null,
+  picks:[], teams:[], players:{}, teamCount:null, locked:false,
   byPlayer:new Map(), teamById:new Map(), timer:null, seen:-1,
 };
 
@@ -891,7 +1033,9 @@ async function draftFromExt(){
   const res=await extCall({type:'get-draft'});
   if(!res||!res.ok)return null;
   EXT.installed=true;
-  return draftFromRows(res);
+  const d=draftFromRows(res);
+  d.locked=!!res.locked; d.paid=!!res.paid;
+  return d;
 }
 async function draftFromHelper(){
   const r=await fetch(HELPER,{cache:'no-store'});
@@ -904,14 +1048,14 @@ async function pollDraft(){
   try{ d=await draftFromExt(); if(d)via='ext'; }catch(e){}
   if(!d){ try{ d=await draftFromHelper(); if(d)via='helper'; }catch(e){} }
   if(d){
-    LIVE.reachable=true;
+    LIVE.reachable=true; LIVE.locked=!!d.locked;
     LIVE.status=d.status||'error'; LIVE.message=d.message||''; LIVE.age=d.age;
     LIVE.picks=d.picks||[]; LIVE.teams=d.teams||[]; LIVE.players=d.players||{};
     LIVE.teamCount=d.teamCount||null;
     LIVE.byPlayer=new Map(LIVE.picks.map(p=>[p.playerId,p]));
     LIVE.teamById=new Map(LIVE.teams.map(t=>[t.id,t]));
   }else{
-    LIVE.reachable=false; LIVE.status='down'; LIVE.age=null;
+    LIVE.reachable=false; LIVE.locked=false; LIVE.status='down'; LIVE.age=null;
     LIVE.message=EXT.installed
       ? 'Open your ESPN draft room in another tab to start syncing.'
       : 'Install the FF Sidekick extension to sync your draft live.';
@@ -925,7 +1069,14 @@ function paintLive(){
   el.classList.toggle('on',LIVE.on);
   el.classList.remove('live','warn','err');
   let txt='';
+  const payb=document.getElementById('pay-banner');
+  if(payb){
+    const showPay=!!(LIVE.on&&LIVE.locked);
+    if(showPay&&payb.hidden&&window.ffTrack)window.ffTrack('paywall_shown');
+    payb.hidden=!showPay;
+  }
   if(!LIVE.on){txt='';}
+  else if(LIVE.locked){el.classList.add('err');txt='season pass required';}
   else if(!LIVE.reachable){el.classList.add('err');txt=EXT.installed?'open your draft room':'extension not installed';}
   else if(LIVE.status==='auth'){el.classList.add('err');txt='ESPN cookies rejected';}
   else if(LIVE.status==='error'){el.classList.add('err');txt='sync error';}
@@ -968,6 +1119,7 @@ function paintLive(){
 function setLive(on){
   LIVE.on=on;
   if(on){
+    if(window.ffTrack)window.ffTrack('live_draft_on');
     pollDraft();
     LIVE.timer=setInterval(pollDraft,5000);
   }else{

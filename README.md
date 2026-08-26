@@ -16,6 +16,7 @@ Go to **https://ashritverma.github.io/ff-sidekick/**. That's the whole research
 tool — search, sort, compare players, view depth charts and news. No install
 needed for research.
 
+<a id="install"></a>
 ### 2. (Optional) Install the extension for live draft sync
 To watch picks land on the board during a real or mock ESPN draft:
 
@@ -27,15 +28,25 @@ To watch picks land on the board during a real or mock ESPN draft:
 Picks stream in automatically. Drafted players get struck through, rosters fill
 in, and the board marks where your next pick lands.
 
+## Pricing
+- The research **board is free** (email to open it).
+- Your **first draft** — mock or real — **syncs free**. Try it in an ESPN mock draft.
+- A one-time **$9.99 season pass** unlocks **unlimited drafts for the 2026
+  season**. Upgrade from the FF Sidekick icon in your Chrome toolbar. (Other
+  draft assistants charge ~$36/year.)
+
 ### Offline copy
-Download **`ff-sidekick-standalone.html`** from this repo — it's a single file
-with all data, images, and fonts embedded. Double-click to open; no server, no
-network. (Live draft sync needs the hosted board + extension.)
+Grab the single-file **offline board** (`ff-sidekick-standalone.html`): all data,
+images, and fonts embedded, opens with no server or network — handy at a draft
+party. It's downloadable free from this repo for the technically inclined, or as
+a one-click **$2.99 download on Gumroad** _(link coming with launch)_. (Live
+draft sync still needs the hosted board + extension.)
 
 ### Privacy
-The extension reads only the ESPN draft-room pick feed and stores picks in your
-own browser. It has no backend and sends nothing anywhere. See
-[store/PRIVACY.md](store/PRIVACY.md).
+Draft picks are read only from the ESPN draft-room feed and stay in your own
+browser. Payment is handled by Stripe (via ExtensionPay); the board asks for your
+email and uses cookieless analytics. FF Sidekick is **not affiliated with ESPN**.
+Full policy: [store/PRIVACY.md](store/PRIVACY.md).
 
 ---
 
@@ -47,7 +58,10 @@ own browser. It has no backend and sends nothing anywhere. See
 | `index.html` | The board (static HTML/CSS/JS, no framework). Fetches `data.json`. |
 | `data.json` | Player snapshot: top-300 PPR, schedule, matchups, coaches, news. |
 | `ff-sidekick-standalone.html` | Single-file offline build (data + images + font embedded). |
-| `extension/` | MV3 Chrome extension (draft companion). |
+| `extension/` | MV3 Chrome extension (draft companion + season-pass gate). |
+| `extension/ExtPay.js` | Vendored [ExtensionPay](https://extensionpay.com) client (Stripe checkout). |
+| `extension/popup.html` / `popup.js` | Toolbar popup: pass status + $9.99 checkout. |
+| `marketing/` | Launch playbook, asset checklist, customer/lead ops, Gumroad setup. |
 | `fetch_espn.py` | Refresh ranks, projections, and per-player news. |
 | `fetch_gamelogs.py` | Weekly PPR game logs and bye weeks. |
 | `fetch_depth.py` | Head coaches, coordinators, and skill-position depth. |
@@ -80,6 +94,19 @@ python3 -m http.server 8000
 
 The extension stores picks in `chrome.storage.session`; `bridge.js` relays them
 to the board via `window.postMessage`, so the page never needs the extension id.
+
+### Configuration (fill before launch)
+Placeholders that need real values, all clearly marked with `TODO`:
+| Where | Constant | What to set |
+| --- | --- | --- |
+| `extension/background.js`, `extension/popup.js` | `EXTPAY_ID` | Your ExtensionPay extension id (register a $9.99 one-time product). |
+| `index.html` | `KIT_FORM_ACTION` | Your Kit (ConvertKit) form action URL for the email gate. |
+| `index.html` (head) | Plausible `data-domain` | The domain you register at plausible.io. |
+| `index.html` | `STORE_URL` | Chrome Web Store listing URL, after approval. |
+| `index.html` | `PRICING_URL` | Defaults to this README's `#pricing`; change if you make a pricing page. |
+
+See [marketing/CUSTOMERS.md](marketing/CUSTOMERS.md) for the Kit + Stripe setup
+and [marketing/LAUNCH.md](marketing/LAUNCH.md) for the full launch checklist.
 
 ### Deploying
 - **Board:** GitHub Pages serves this repo root. Push to `main`.
